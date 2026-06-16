@@ -1,0 +1,18 @@
+services:  
+
+  shoe-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shoe-backend
+    environment:
+      - .env
+    ports:
+      - "8023:8023"
+    networks:
+      - shoe-backend
+    restart: unless-stopped
+
+networks:
+  shoe-backend:
+    driver: bridge

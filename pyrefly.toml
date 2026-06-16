@@ -1,0 +1,2 @@
+project-includes = ["app"]
+python-interpreter = "venv/bin/python"
