@@ -69,10 +69,10 @@ class User:
         return [cls(**_row(r)) for r in rows]
 
     async def delete(self) -> bool:
-        await execute_command(
-            "DELETE FROM users WHERE user_id = $1",
-            uuid.UUID(self.user_id),
-        )
+        user_uuid = uuid.UUID(self.user_id)
+        # Cascade: remove the user's sessions first (FK), then the user itself.
+        await execute_command("DELETE FROM activity_sessions WHERE user_id = $1", user_uuid)
+        await execute_command("DELETE FROM users WHERE user_id = $1", user_uuid)
         return True
 
     def to_dict(self) -> dict:

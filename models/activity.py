@@ -25,8 +25,17 @@ class Activity:
 
     @classmethod
     async def find_by_name(cls, activity_name: str) -> Optional["Activity"]:
+        # Match case-insensitively and ignore separator style (space / underscore / hyphen),
+        # so "Stairs Up", "stairs_up", and "Stairs-Up" all resolve to the same activity.
+        # This stops session creation 404ing on multi-word activities and blocks near-duplicate creates.
         row = await execute_query_one(
-            "SELECT * FROM activity WHERE LOWER(activity_name) = LOWER($1)", activity_name
+            """
+            SELECT * FROM activity
+            WHERE LOWER(TRANSLATE(activity_name, ' _-', '')) = LOWER(TRANSLATE($1, ' _-', ''))
+            ORDER BY created_at
+            LIMIT 1
+            """,
+            activity_name,
         )
         if row is None:
             return None
@@ -50,10 +59,10 @@ class Activity:
         return [cls(**_row(r)) for r in rows]
 
     async def delete(self) -> bool:
-        await execute_command(
-            "DELETE FROM activity WHERE activity_id = $1",
-            uuid.UUID(self.activity_id),
-        )
+        activity_uuid = uuid.UUID(self.activity_id)
+        # Cascade: remove sessions referencing this activity first (FK), then the activity.
+        await execute_command("DELETE FROM activity_sessions WHERE activity_id = $1", activity_uuid)
+        await execute_command("DELETE FROM activity WHERE activity_id = $1", activity_uuid)
         return True
 
     def to_dict(self) -> dict:
