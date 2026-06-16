@@ -34,4 +34,4 @@ COPY . /app/
 # Set the entrypoint to use uvicorn from the venv
 ENTRYPOINT ["/app/.venv/bin/uvicorn"]
 
-CMD ["app.main:app", "--host", "0.0.0.0", "--port", "8023"]
+CMD ["main:app", "--host", "0.0.0.0", "--port", "8023"]
