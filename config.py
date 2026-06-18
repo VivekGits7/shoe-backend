@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = Field(description="PostgreSQL user")
     POSTGRES_PASSWORD: str = Field(description="PostgreSQL password")
 
+    # ==================== JWT / ADMIN AUTH CONFIGURATION ====================
+    JWT_SECRET_KEY: str = Field(default="change-me", description="JWT signing secret")
+    JWT_ALGORITHM: str = Field(default="HS256", description="JWT signing algorithm")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=1440, description="Admin token expiry in minutes (24h)")
+
     @property
     def asyncpg_url(self) -> str:
         password = quote_plus(self.POSTGRES_PASSWORD)

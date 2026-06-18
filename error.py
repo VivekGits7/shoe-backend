@@ -39,6 +39,16 @@ class BadRequestException(AppException):
         super().__init__(status_code=400, detail=detail, error_code=error_code)
 
 
+class UnauthorizedException(AppException):
+    def __init__(self, detail: str = "Unauthorized", error_code: str = "UNAUTHORIZED"):
+        super().__init__(status_code=401, detail=detail, error_code=error_code)
+
+
+class ForbiddenException(AppException):
+    def __init__(self, detail: str = "Forbidden", error_code: str = "FORBIDDEN"):
+        super().__init__(status_code=403, detail=detail, error_code=error_code)
+
+
 class ConflictException(AppException):
     def __init__(self, detail: str = "Resource already exists", error_code: str = "CONFLICT"):
         super().__init__(status_code=409, detail=detail, error_code=error_code)

@@ -1,13 +1,20 @@
 from typing import Optional
 
 import asyncpg
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from error import AppException, ConflictException, NotFoundException, validate_uuid
 from limiter import limiter
 from logger import get_logger
+from models.auth import Admin, get_current_admin
 from models.user import User
-from schema.response import COMMON_ERROR_RESPONSES, BadRequestResponse, ConflictResponse, NotFoundResponse
+from schema.response import (
+    COMMON_ERROR_RESPONSES,
+    BadRequestResponse,
+    ConflictResponse,
+    NotFoundResponse,
+    UnauthorizedResponse,
+)
 from schema.users.users import (
     CreateUserRequest,
     CreateUserResponse,
@@ -104,13 +111,18 @@ async def get_user_device(request: Request, user_id: str) -> UserDeviceResponse:
         **COMMON_ERROR_RESPONSES,
         201: {"model": CreateUserResponse, "description": "User created successfully"},
         400: {"model": BadRequestResponse, "description": "Missing or invalid fields"},
+        401: {"model": UnauthorizedResponse, "description": "Admin authentication required"},
         409: {"model": ConflictResponse, "description": "User with same name and device already exists"},
     },
 )
 @limiter.limit("20/minute")
-async def create_user(request: Request, data: CreateUserRequest) -> CreateUserResponse:
+async def create_user(
+    request: Request,
+    data: CreateUserRequest,
+    current_admin: Admin = Depends(get_current_admin),
+) -> CreateUserResponse:
     """
-    Create a new user.
+    Create a new user. **Requires admin authentication** (Bearer token).
 
     - **user_name** (str, required): Display name (1-100 chars)
     - **device_id** (str, required): Hardware device identifier
@@ -151,14 +163,19 @@ async def create_user(request: Request, data: CreateUserRequest) -> CreateUserRe
         **COMMON_ERROR_RESPONSES,
         204: {"description": "User deleted (no body)"},
         400: {"model": BadRequestResponse, "description": "Invalid user_id UUID format"},
+        401: {"model": UnauthorizedResponse, "description": "Admin authentication required"},
         404: {"model": NotFoundResponse, "description": "User not found"},
         409: {"model": ConflictResponse, "description": "User still has activity sessions"},
     },
 )
 @limiter.limit("20/minute")
-async def delete_user(request: Request, user_id: str):
+async def delete_user(
+    request: Request,
+    user_id: str,
+    current_admin: Admin = Depends(get_current_admin),
+):
     """
-    Delete a user by ID.
+    Delete a user by ID. **Requires admin authentication** (Bearer token).
 
     - **user_id** (path): User UUID
     - Note: Fails with 409 if the user still has activity sessions — delete those first

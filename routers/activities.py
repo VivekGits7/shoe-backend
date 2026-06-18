@@ -1,17 +1,24 @@
 import asyncpg
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from error import AppException, ConflictException, NotFoundException, validate_uuid
 from limiter import limiter
 from logger import get_logger
 from models.activity import Activity
+from models.auth import Admin, get_current_admin
 from schema.activities.activities import (
     ActivityListResponse,
     ActivityOption,
     CreateActivityRequest,
     CreateActivityResponse,
 )
-from schema.response import COMMON_ERROR_RESPONSES, BadRequestResponse, ConflictResponse, NotFoundResponse
+from schema.response import (
+    COMMON_ERROR_RESPONSES,
+    BadRequestResponse,
+    ConflictResponse,
+    NotFoundResponse,
+    UnauthorizedResponse,
+)
 
 logger = get_logger(__name__)
 
@@ -58,13 +65,18 @@ async def list_activities(request: Request) -> ActivityListResponse:
     responses={
         **COMMON_ERROR_RESPONSES,
         201: {"model": CreateActivityResponse, "description": "Activity created successfully"},
+        401: {"model": UnauthorizedResponse, "description": "Admin authentication required"},
         409: {"model": ConflictResponse, "description": "Activity with this name already exists"},
     },
 )
 @limiter.limit("20/minute")
-async def create_activity(request: Request, data: CreateActivityRequest) -> CreateActivityResponse:
+async def create_activity(
+    request: Request,
+    data: CreateActivityRequest,
+    current_admin: Admin = Depends(get_current_admin),
+) -> CreateActivityResponse:
     """
-    Create a new activity type.
+    Create a new activity type. **Requires admin authentication** (Bearer token).
 
     - **activity_name** (str, required): Name of the activity to create (e.g. swimming, yoga)
     """
@@ -98,14 +110,19 @@ async def create_activity(request: Request, data: CreateActivityRequest) -> Crea
         **COMMON_ERROR_RESPONSES,
         204: {"description": "Activity deleted (no body)"},
         400: {"model": BadRequestResponse, "description": "Invalid activity_id UUID format"},
+        401: {"model": UnauthorizedResponse, "description": "Admin authentication required"},
         404: {"model": NotFoundResponse, "description": "Activity not found"},
         409: {"model": ConflictResponse, "description": "Activity still has recorded sessions"},
     },
 )
 @limiter.limit("20/minute")
-async def delete_activity(request: Request, activity_id: str):
+async def delete_activity(
+    request: Request,
+    activity_id: str,
+    current_admin: Admin = Depends(get_current_admin),
+):
     """
-    Delete an activity by ID.
+    Delete an activity by ID. **Requires admin authentication** (Bearer token).
 
     - **activity_id** (path): Activity UUID
     - Note: Fails with 409 if any session still references this activity — delete those first

@@ -39,6 +39,28 @@ class BadRequestResponse(BaseModel):
     }})
 
 
+class UnauthorizedResponse(BaseModel):
+    success: bool = Field(default=False)
+    error: ErrorBody
+
+    model_config = ConfigDict(json_schema_extra={"example": {
+        "success": False,
+        "error": {"status_code": 401, "status_message": "UNAUTHORIZED",
+                  "message": "Could not validate credentials", "code": "UNAUTHORIZED"}
+    }})
+
+
+class ForbiddenResponse(BaseModel):
+    success: bool = Field(default=False)
+    error: ErrorBody
+
+    model_config = ConfigDict(json_schema_extra={"example": {
+        "success": False,
+        "error": {"status_code": 403, "status_message": "FORBIDDEN",
+                  "message": "You don't have permission to access this resource.", "code": "FORBIDDEN"}
+    }})
+
+
 class NotFoundResponse(BaseModel):
     success: bool = Field(default=False)
     error: ErrorBody

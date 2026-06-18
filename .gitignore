@@ -6,6 +6,9 @@
 # Logs
 logs/
 
+# Database backups (pg_dump output)
+backups/
+
 # archive
 
 # Claude

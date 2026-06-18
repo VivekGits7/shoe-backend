@@ -11,6 +11,7 @@ from error import setup_error_handlers
 from limiter import limiter
 from logger import get_logger, setup_logging
 from routers.activities import router as activities_router
+from routers.auth import router as auth_router
 from routers.devices import router as devices_router
 from routers.sessions import router as sessions_router
 from routers.users import router as users_router
@@ -60,6 +61,7 @@ app.add_middleware(
 )
 
 # Routers
+app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(activities_router)
 app.include_router(devices_router)

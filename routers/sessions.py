@@ -3,16 +3,22 @@ import io
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 
 from error import AppException, BadRequestException, NotFoundException, validate_uuid
 from limiter import limiter
 from logger import get_logger
 from models.activity import Activity
+from models.auth import Admin, get_current_admin
 from models.session import ActivitySession
 from models.user import User
-from schema.response import COMMON_ERROR_RESPONSES, BadRequestResponse, NotFoundResponse
+from schema.response import (
+    COMMON_ERROR_RESPONSES,
+    BadRequestResponse,
+    NotFoundResponse,
+    UnauthorizedResponse,
+)
 from schema.sessions.sessions import (
     BulkDeleteRequest,
     DeleteResponse,
@@ -35,12 +41,17 @@ router = APIRouter(prefix="/api/sessions", tags=["Sessions"])
         **COMMON_ERROR_RESPONSES,
         200: {"model": DeleteResponse, "description": "Number of sessions deleted"},
         400: {"model": BadRequestResponse, "description": "session_ids list is empty or contains invalid UUIDs"},
+        401: {"model": UnauthorizedResponse, "description": "Admin authentication required"},
     },
 )
 @limiter.limit("10/minute")
-async def bulk_delete_sessions(request: Request, payload: BulkDeleteRequest) -> DeleteResponse:
+async def bulk_delete_sessions(
+    request: Request,
+    payload: BulkDeleteRequest,
+    current_admin: Admin = Depends(get_current_admin),
+) -> DeleteResponse:
     """
-    Delete multiple sessions in one call.
+    Delete multiple sessions in one call. **Requires admin authentication** (Bearer token).
 
     - **session_ids** (list[str], required): List of session UUIDs to delete
     """
@@ -290,13 +301,18 @@ async def export_sessions(
         **COMMON_ERROR_RESPONSES,
         204: {"description": "Session deleted (no body)"},
         400: {"model": BadRequestResponse, "description": "Invalid UUID format"},
+        401: {"model": UnauthorizedResponse, "description": "Admin authentication required"},
         404: {"model": NotFoundResponse, "description": "Session not found"},
     },
 )
 @limiter.limit("30/minute")
-async def delete_session(request: Request, session_id: str):
+async def delete_session(
+    request: Request,
+    session_id: str,
+    current_admin: Admin = Depends(get_current_admin),
+):
     """
-    Delete a single session.
+    Delete a single session. **Requires admin authentication** (Bearer token).
 
     - **session_id** (path): Session UUID
     """
